@@ -6,8 +6,10 @@ using System.Threading.Tasks;
 using AgentSyncConsole.Helpers;
 using AgentSyncConsole.Interfaces.PaymentInterface;
 using AgentSyncConsole.InvoiceIngest.Interfaces;
+using AgentSyncConsole.InvoiceIngest.Models;
 using AgentSyncConsole.Models;
 using Microsoft.Data.SqlClient;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace AgentSyncConsole.Repositories.PaymentRepo
 {
@@ -21,38 +23,7 @@ namespace AgentSyncConsole.Repositories.PaymentRepo
             _connectionFactory = connectionFactory;
         }
 
-        //public async Task<List<string>> GetPaymentsAsync()
-        //{
-        //    List<string> payments = new List<string>();
-
-        //    using var connection = await _connectionFactory.CreateOpenConnectionAsync();
-
-        //    string query = @"
-        //    SELECT payments
-        //    FROM ThirdPartyData
-        //    WHERE payments IS NOT NULL
-        //    AND LTRIM(RTRIM(payments)) <> ''";
-
-
-
-        //using var command = new SqlCommand(query, connection);
-
-
-        //using var reader = await command.ExecuteReaderAsync();
-
-        //    while (await reader.ReadAsync())
-        //    {
-        //        string payment = reader["payments"]?.ToString() ?? "";
-
-        //        if (!string.IsNullOrWhiteSpace(payment))
-        //        {
-        //            payments.Add(payment);
-        //        }
-        //    }
-
-        //return payments;
-        //}
-
+        
         public async Task<List<string>> GetPaymentsAsync()
         {
             List<string> payments = new List<string>();
@@ -107,109 +78,6 @@ namespace AgentSyncConsole.Repositories.PaymentRepo
 
 
 
-        /*  public async Task<List<string>> GetPaymentsAsync()
-          {
-              List<string> payments = new List<string>();
-
-              using var connection = await _connectionFactory.CreateOpenConnectionAsync();
-              //string query1=
-              string query = @"
-          UPDATE ThirdPartyData
-          SET syncStatus = 'fetched data from thirdparty for insertion PaymentDetail Table',
-              syncTime = SYSDATETIME(),
-          OUTPUT inserted.payments
-          WHERE payments IS NOT NULL
-            AND LTRIM(RTRIM(payments)) <> ''
-               AND (status IS NULL OR status ='')";
-
-              using var command = new SqlCommand(query, connection);
-              using var reader = await command.ExecuteReaderAsync();
-
-              while (await reader.ReadAsync())
-              {
-                  string payment = reader["payments"]?.ToString() ?? "";
-
-                  if (!string.IsNullOrWhiteSpace(payment))
-                  {
-                      payments.Add(payment);
-                  }
-              }
-
-              return payments;
-          }*/
-        /*public async Task AddPaymentAsync(PaymentDetail payment)
-            {
-                using var connection = await _connectionFactory.CreateOpenConnectionAsync();
-
-            /*            string query = @"
-            INSERT INTO PaymentDetails (
-                Customer_Name,
-                Location_Name,
-                Amount_Received,
-                Payment_Date,
-                Payment_No,
-                Payment_Mode,
-                Deposit_to,
-                Tax_if_Applicable_COApaymentID,
-                Hotel_ID,
-                Books_ID,
-                Books_Status,
-                Response,
-                Details
-            )
-            SELECT 
-                @Customer_Name,
-                @Location_Name,
-                @Amount_Received,
-                @Payment_Date,
-                @Payment_No,
-                @Payment_Mode,
-                @Deposit_to,
-                @Tax_if_Applicable_COApaymentID,
-                @Hotel_ID,
-                @Books_ID,
-                @Books_Status,
-                @Response,
-                @Details
-            from PaymentDetails where Payment_No in (select distinct Payment_No from PaymentDetails);"; 
-
-            //            string query2 = @"UPDATE paymentdetails
-            //SET syncStatus = 'Inserted json data in PaymentDetail Table',
-            //    createdTime = SYSDATETIME()
-            //where syncStatus is null";
-            const string query = @"
-        SELECT CASE 
-            WHEN EXISTS (
-                SELECT 1
-                FROM PaymentDetails
-                WHERE Payment_No = @Payment_No
-            )
-            THEN 1
-            ELSE 0
-        END;";
-
-
-            using var command = new SqlCommand(query, connection);
-            //using var command2 = new SqlCommand(query2, connection);
-
-                command.Parameters.AddWithValue("@Customer_Name", (object?)payment.Customer_Name ?? DBNull.Value);
-                command.Parameters.AddWithValue("@Location_Name", (object?)payment.Location_Name ?? DBNull.Value);
-                command.Parameters.AddWithValue("@Amount_Received", (object?)payment.Amount_Received ?? DBNull.Value);
-                command.Parameters.AddWithValue("@Payment_Date", (object?)payment.Payment_Date ?? DBNull.Value);
-                command.Parameters.AddWithValue("@Payment_No", (object?)payment.Payment_No ?? DBNull.Value);
-                command.Parameters.AddWithValue("@Payment_Mode", (object?)payment.Payment_Mode ?? DBNull.Value);
-                command.Parameters.AddWithValue("@Deposit_to", (object?)payment.Deposit_to ?? DBNull.Value);
-                command.Parameters.AddWithValue("@Tax_if_Applicable_COApaymentID", (object?)payment.Tax_if_Applicable_COApaymentID ?? DBNull.Value);
-                command.Parameters.AddWithValue("@Hotel_ID", (object?)payment.Hotel_ID ?? DBNull.Value);
-                command.Parameters.AddWithValue("@Books_ID", (object?)payment.Books_ID ?? DBNull.Value);
-                command.Parameters.AddWithValue("@Books_Status", (object?)payment.Books_Status ?? DBNull.Value);
-                command.Parameters.AddWithValue("@Response", (object?)payment.Response ?? DBNull.Value);
-                command.Parameters.AddWithValue("@Details", (object?)payment.Details ?? DBNull.Value);
-
-                await command.ExecuteNonQueryAsync();
-                //await command2.ExecuteNonQueryAsync();
-
-            }  */
 
         public async Task AddPaymentAsync(PaymentDetail payment)
         {
@@ -261,7 +129,8 @@ namespace AgentSyncConsole.Repositories.PaymentRepo
             Books_ID,
             Books_Status,
             Response,
-            Details
+            Details,
+            groupId
         )
         VALUES (
             @Customer_Name,
@@ -276,7 +145,8 @@ namespace AgentSyncConsole.Repositories.PaymentRepo
             @Books_ID,
             @Books_Status,
             @Response,
-            @Details
+            @Details,
+            @GroupId
         );";
 
             using var insertCommand = new SqlCommand(insertQuery, connection);
@@ -319,6 +189,9 @@ namespace AgentSyncConsole.Repositories.PaymentRepo
 
             insertCommand.Parameters.AddWithValue("@Details",
                 (object?)payment.Details ?? DBNull.Value);
+
+            insertCommand.Parameters.AddWithValue("@GroupId",
+               (object?)payment.groupId ?? DBNull.Value);
 
             await insertCommand.ExecuteNonQueryAsync();
         }
@@ -382,55 +255,60 @@ AND(I.BooksInvoiceID IS NOT NULL)*/
 
 
 
-        public async Task<InvoiceDetails?> GetInvoiceByReservationIdAsync(string reservationId)
+        public async Task<InvoiceDetails?> GetInvoiceByReservationIdAsync(string reservationId, string HOTELID)
         {
-            using var connection =
-                await _connectionFactory.CreateOpenConnectionAsync();
+            using var connection = await _connectionFactory.CreateOpenConnectionAsync();
 
             const string query = @"
-        SELECT
-            InvoiceID,
-            Reservation_ID,
-            Customer_Name,
-            BooksInvoiceID,
-            Owner_Type
-        FROM Invoice
-        WHERE Reservation_ID = @Reservation_ID and BooksInvoiceID IS NOT NULL";
+        SELECT 
+            I.BooksInvoiceID, 
+            I.Invoice_Number, 
+            I.Customer_Name, 
+            I.Reservation_ID, 
+            I.Owner_Type,
+                   IL.InvoiceID, 
+            IL.TransactionID, 
+            T.Transaction_ID, 
+            T.Amount, 
+            T.Tax_value, 
+            T.Rate
+        FROM Invoice I
+               LEFT JOIN Invoice_LineItem IL
+                   ON IL.InvoiceID = I.InvoiceID
+               LEFT JOIN TransactionModule T
+                   ON T.Transaction_ID = IL.TransactionID
+               WHERE I.Reservation_ID = @Reservation_ID
+                 AND I.Hotel_ID = @Hotel_ID
+                 AND ISNULL(I.BooksInvoiceID, '') <> ''";
+       
+    using var command = new SqlCommand(query, connection);
 
-            using var command = new SqlCommand(query, connection);
+            command.Parameters.AddWithValue("@Reservation_ID", reservationId ?? (object)DBNull.Value);
+            command.Parameters.AddWithValue("@Hotel_ID", HOTELID ?? (object)DBNull.Value);
 
-            command.Parameters.AddWithValue(
-                "@Reservation_ID",
-                reservationId);
-
-            using var reader =
-                await command.ExecuteReaderAsync();
+            using var reader = await command.ExecuteReaderAsync();
 
             if (await reader.ReadAsync())
             {
                 return new InvoiceDetails
                 {
-                    InvoiceID = reader["InvoiceID"]?.ToString(),
-
-                    Reservation_ID =
-                        reader["Reservation_ID"]?.ToString(),
-
-                    Customer_Name =
-                        reader["Customer_Name"]?.ToString(),
-
-                    BooksInvoiceID =
-                        reader["BooksInvoiceID"]?.ToString(),
-
-                    Owner_Type = reader["Owner_Type"]?.ToString()
+                    BooksInvoiceID = reader["BooksInvoiceID"] != DBNull.Value ? reader["BooksInvoiceID"].ToString() : null,
+                    InvoiceNumber = reader["Invoice_Number"] != DBNull.Value ? reader["Invoice_Number"].ToString() : null,
+                    Customer_Name = reader["Customer_Name"] != DBNull.Value ? reader["Customer_Name"].ToString() : null,
+                    InvoiceID = reader["InvoiceID"] != DBNull.Value ? reader["InvoiceID"].ToString() : null,
+                    Reservation_ID = reader["Reservation_ID"] != DBNull.Value ? reader["Reservation_ID"].ToString() : null,
+                    Transaction_ID = reader["Transaction_ID"] != DBNull.Value ? reader["Transaction_ID"].ToString() : null,
+                    TransactionAmount = reader["Amount"] != DBNull.Value ? reader["Amount"].ToString() : null,
+                    TransactionRate = reader["Rate"] != DBNull.Value ? reader["Rate"].ToString() : null,
+                    Tax_value = reader["Tax_value"] != DBNull.Value ? reader["Tax_value"].ToString() : null,
+                    Owner_Type = reader["Owner_Type"] != DBNull.Value ? reader["Owner_Type"].ToString() : null
                 };
             }
 
             return null;
         }
 
-
-
-        public async Task<CustomerDetail?> GetCustomerByCustomerIdAsync(string customerId)
+        public async Task<CustomerDetail?> GetCustomerByCustomerIdAsync(string customerId,string hotelId)
         {
             using var connection = await _connectionFactory.CreateOpenConnectionAsync();
 
@@ -439,11 +317,13 @@ AND(I.BooksInvoiceID IS NOT NULL)*/
             CustomerID,
             booksID
         FROM Customer
-        WHERE CustomerID = @CustomerID";
+        WHERE CustomerID = @CustomerID
+          AND hotelID = @Hotel_ID";
 
             using var command = new SqlCommand(query, connection);
 
             command.Parameters.AddWithValue("@CustomerID", customerId);
+            command.Parameters.AddWithValue("@Hotel_ID", hotelId);
 
             using var reader = await command.ExecuteReaderAsync();
 
@@ -459,8 +339,78 @@ AND(I.BooksInvoiceID IS NOT NULL)*/
             return null;
         }
 
+        public async Task<List<PaymentInvoice>>
+            GetPaymentInvoicetransactionDetailsAsync(
+                string customerName,
+                string hotelId)
+        {
+            using var connection =
+                await _connectionFactory.CreateOpenConnectionAsync();
 
+            /*const string query = @"
+        SELECT
+            I.BooksInvoiceID,
+            T.Amount AS InvoiceAmount,
+            T.Rate AS TransactionRate
+        FROM PaymentDetails P
+        INNER JOIN Invoice I
+            ON I.Reservation_ID = P.Customer_Name
+            AND I.Hotel_ID = P.Hotel_ID
+        INNER JOIN Invoice_LineItem IL
+            ON IL.InvoiceID = I.BooksInvoiceID
+        INNER JOIN TransactionModule T
+            ON T.Transaction_ID = IL.TransactionID
+        WHERE P.Customer_Name = @Customer_Name
+          AND P.Hotel_ID = @Hotel_ID
+          AND NOT (I.BooksInvoiceID = '' OR I.BooksInvoiceID IS NULL)";*/
 
+            const string query = @"
+
+SELECT
+    I.BooksInvoiceID,
+    I.Invoice_Number,
+    IL.InvoiceID,
+    IL.TransactionID,
+    T.Transaction_ID,
+    T.Amount AS TransactionAmount, 
+    T.Tax_value,
+    T.Rate AS TransactionRate     
+FROM Invoice I
+LEFT JOIN Invoice_LineItem IL
+    ON IL.InvoiceID = I.InvoiceID
+LEFT JOIN TransactionModule T
+    ON T.Transaction_ID = IL.TransactionID
+WHERE I.Reservation_ID = @Customer_Name
+  AND I.Hotel_ID = @Hotel_ID
+  AND I.BooksInvoiceID IS NOT NULL
+AND LTRIM(RTRIM(I.BooksInvoiceID)) <> ''
+";
+
+            using var command = new SqlCommand(query, connection);
+
+            command.Parameters.AddWithValue("@Customer_Name", customerName ?? (object)DBNull.Value);
+            command.Parameters.AddWithValue("@Hotel_ID", hotelId ?? (object)DBNull.Value);
+
+            using var reader = await command.ExecuteReaderAsync();
+            var result = new List<PaymentInvoice>();
+
+            while (await reader.ReadAsync())
+            {
+                result.Add(new PaymentInvoice
+                {
+                    BooksInvoiceID = reader["BooksInvoiceID"] != DBNull.Value ? reader["BooksInvoiceID"].ToString() : null,
+                    InvoiceNumber = reader["Invoice_Number"] != DBNull.Value ? reader["Invoice_Number"].ToString() : null,
+                    InvoiceID = reader["InvoiceID"] != DBNull.Value ? reader["InvoiceID"].ToString() : null,
+                    TransactionID = reader["TransactionID"] != DBNull.Value ? reader["TransactionID"].ToString() : null,
+                    Transaction_ID = reader["Transaction_ID"] != DBNull.Value ? reader["Transaction_ID"].ToString() : null,
+                    TransactionAmount = reader["TransactionAmount"] != DBNull.Value ? reader["TransactionAmount"].ToString() : null,
+                    Tax_value = reader["Tax_value"] != DBNull.Value ? reader["Tax_value"].ToString() : null,
+                    TransactionRate = reader["TransactionRate"] != DBNull.Value ? reader["TransactionRate"].ToString() : null
+                });
+            }
+
+            return result;
+        }
 
         public async Task<Bank_COA?> GetBankCoaByNameAsync_B2C(string details)
         {
@@ -558,9 +508,9 @@ AND(I.BooksInvoiceID IS NOT NULL)*/
                     Books_Status = @Books_Status,
                     Books_ID = @Books_ID,
                     Response = @Response,
-                    syncStatus= 'Inserted data in Books PaymentDetail Table',
+                    syncStatus= 'Inserted data in Zoho Books',
                     syncTime = SYSDATETIME()
-                WHERE Payment_No = @Payment_No";
+                WHERE Payment_No = @Payment_No AND (Books_Status IS NULL OR Books_Status='' OR Books_Status='failed') ";
 
             using var command =
                 new SqlCommand(query, connection);

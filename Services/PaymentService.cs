@@ -26,6 +26,7 @@ namespace AgentSyncConsole.Services
         private readonly string _upiCustomerBooksId;
         private readonly string _creditCardCustomerBooksId;
         private readonly IAccessTokenService _accessTokenService;
+        private readonly string _hardcodedFallbackCustomerBooksId;
 
         public PaymentService(IPaymentRepository repository, HttpClient httpClient, IAccessTokenService accessTokenService, IConfiguration configuration)
         {
@@ -39,6 +40,7 @@ namespace AgentSyncConsole.Services
             _cashCustomerBooksId = configuration["GuestCustomerMapping:CashCustomerBooksId"] ?? string.Empty;
             _upiCustomerBooksId = configuration["GuestCustomerMapping:UpiCustomerBooksId"] ?? string.Empty;
             _creditCardCustomerBooksId = configuration["GuestCustomerMapping:CreditCardCustomerBooksId"] ?? string.Empty;
+            _hardcodedFallbackCustomerBooksId = configuration["Sync:HardcodedFallbackCustomerBooksId"] ?? string.Empty;
         }
 
 
@@ -137,7 +139,7 @@ namespace AgentSyncConsole.Services
 
             foreach (var payment in payments)
             {
-                var invoice = await _repository.GetInvoiceByReservationIdAsync(payment.Customer_Name!);
+                var invoice = await _repository.GetInvoiceByReservationIdAsync(payment.Customer_Name!,payment.Hotel_ID);
 
                 if (invoice == null)
                 {
@@ -146,17 +148,18 @@ namespace AgentSyncConsole.Services
 
                 }
 
-                var customer = await _repository.GetCustomerByCustomerIdAsync(invoice.Customer_Name!);
-
-                if (customer == null)
+                var customer = await _repository.GetCustomerByCustomerIdAsync(invoice.Customer_Name!,payment.Hotel_ID);
+                var booksID = customer?.BooksID ;
+                if (booksID == null)
                 {
                     Console.WriteLine($"Customer not found : {invoice.Customer_Name}");
-                    continue;
+                    booksID = _hardcodedFallbackCustomerBooksId; // Use the hardcoded fallback Books ID
+
                 }
                 else
                 {
                     Console.WriteLine($"Customer found:{customer.CustomerID}");
-                    // Assuming you have fetched your invoice object which contains Owner_Type
+                   
                 }
 
 
@@ -174,19 +177,19 @@ namespace AgentSyncConsole.Services
                     new InvoiceAllocation
                     {
                         invoice_id = invoice.BooksInvoiceID,
-                        amount_applied = Convert.ToDecimal(payment.Amount_Received)
+                        amount_applied = Convert.ToDecimal(invoice.TransactionRate)
                     }
                 };
                     payload = new
                     {
 
-                        customer_id = customer.BooksID,
-                        payment_mode = "Cash",
-                        account_id = bankCoa.BooksID ?? "3233228000000063811",
-                        amount = Convert.ToDecimal(payment.Amount_Received),
+                        customer_id = booksID,
+                        payment_mode = "Cash",          
+                        account_id = bankCoa.BooksID ?? "3233228000000063811", 
+                        amount = Convert.ToDecimal(invoice.TransactionRate), //not good here,need to change value
                         date = payment.Payment_Date,
-                        reference_number = payment.Payment_No,
-                        invoices = invoices
+                        reference_number = payment.Payment_No, 
+                        invoices = invoices 
 
                     }
                ;
@@ -246,13 +249,11 @@ namespace AgentSyncConsole.Services
                     Console.WriteLine($"Unknown Owner_Type: '{ownerType}' for payment details: {payment.Details}");
                 }
 
-                // Log if no Bank COA was retrieved
+            
                 if (bankCoa == null)
                 {
                     Console.WriteLine($"Bank COA not found for: {payment.Details}");
-
-
-                    //continue; // Uncomment if inside a loop
+                    continue; 
                 }
 
 
@@ -319,5 +320,3 @@ namespace AgentSyncConsole.Services
         }
     }
 }
-
-

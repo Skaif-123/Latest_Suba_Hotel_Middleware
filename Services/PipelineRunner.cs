@@ -225,7 +225,7 @@ namespace AgentSyncConsole.Services
             //    _logger.LogInformation("BOOKS INVOICE SYNC START");
             //    _logger.LogInformation("==================================================");
 
-            //    var booksSummary = await _booksInvoiceSyncService.RunAsync(ct);
+                //var booksSummary = await _booksInvoiceSyncService.RunAsync(ct);
 
             //    _logger.LogInformation(
             //        "BOOKS INVOICE SYNC FINISHED => status={Status}, created={Created}, updated={Updated}, skipped={Skipped}",
@@ -251,16 +251,16 @@ namespace AgentSyncConsole.Services
             Console.WriteLine("==================================================");
             Console.WriteLine("PosInvoice ZohoBooks POST START");
             Console.WriteLine("==================================================");
-            await _posInvoiceBooksSyncService.RunAsync();
+            //await _posInvoiceBooksSyncService.RunAsync();
 
 
             Console.WriteLine("Starting with payment part");
-            await _paymentService.PrintPaymentsAsync();
+            //await _paymentService.PrintPaymentsAsync();
             await _paymentService.UploadPaymentsToZohoAsync();
 
             Console.WriteLine("Starting with credit note part");
-            await _creditNoteSyncService.RunAsync(default);
-            await _creditNoteSyncService_ZohoBooks.RunAsync(default);
+            //await _creditNoteSyncService.RunAsync(default);
+            //await _creditNoteSyncService_ZohoBooks.RunAsync(default);
 
 
 

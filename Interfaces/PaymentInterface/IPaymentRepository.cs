@@ -11,9 +11,10 @@ namespace AgentSyncConsole.Interfaces.PaymentInterface
     {
         Task<List<string>> GetPaymentsAsync();
         Task AddPaymentAsync(PaymentDetail paymentDetail);
-        Task<InvoiceDetails?> GetInvoiceByReservationIdAsync(string reservationId);
+        Task<InvoiceDetails?> GetInvoiceByReservationIdAsync(string reservationId,string HotelID);
+        Task<List<PaymentInvoice>> GetPaymentInvoicetransactionDetailsAsync(string customerId,string hotelId);
 
-        Task<CustomerDetail?> GetCustomerByCustomerIdAsync(string customerId);
+        Task<CustomerDetail?> GetCustomerByCustomerIdAsync(string customerId,string hotelId);
 
         Task<List<PaymentDetail>> GetPendingPaymentsAsync();
 

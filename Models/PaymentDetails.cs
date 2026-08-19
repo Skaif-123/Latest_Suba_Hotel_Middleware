@@ -35,5 +35,7 @@ namespace AgentSyncConsole.Models
         public string? Details { get; set; }
 
         public string? Response { get; set; }
+
+        public string? groupId { get; set; }
     }
 }
